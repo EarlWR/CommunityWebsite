@@ -36,7 +36,8 @@ public class HomeController {
         page.setPath("/index");
         ModelAndView mav=new ModelAndView();
         List<DiscussPost> list= discussPostService.findDiscuss(0,page.getOffset(),page.getLim());
-        List<Map<String,Object>> discussPosts=new ArrayList<>();  //discussPosts整合了用户和帖子的数据
+        //discussPosts整合了用户和帖子的数据
+        List<Map<String,Object>> discussPosts=new ArrayList<>();
         if (list!=null)
         {
             for (DiscussPost post:list)
