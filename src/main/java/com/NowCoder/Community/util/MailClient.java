@@ -31,7 +31,8 @@ public class MailClient {
             helper.setFrom(from);
             helper.setTo(to);
             helper.setSubject(subject);
-            helper.setText(content,true);//如果不加true会以文本发送，加了以html文件发送
+            //如果不加true会以文本发送，加了以html文件发送
+            helper.setText(content,true);
             mailSender.send(helper.getMimeMessage());
         } catch (MessagingException e) {
             logger.error("发送邮件失败"+e.getMessage());
