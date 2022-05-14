@@ -1,6 +1,8 @@
 package com.NowCoder.Community.Service;
 
+import com.NowCoder.Community.dao.LoginTicketMapper;
 import com.NowCoder.Community.dao.UserMapper;
+import com.NowCoder.Community.entity.LoginTicket;
 import com.NowCoder.Community.entity.User;
 import com.NowCoder.Community.util.CommunityConstant;
 import com.NowCoder.Community.util.CommunityUtil;
@@ -12,10 +14,8 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 @Service
 public class UserService  implements CommunityConstant {
@@ -25,6 +25,8 @@ public class UserService  implements CommunityConstant {
     private MailClient mailClient;
     @Autowired
     private TemplateEngine templateEngine;
+    @Autowired
+    private LoginTicketMapper loginTicketMapper;
     @Value("${community.path.domain}")
     private String domain;
     @Value("${server.servlet.context-path}")
@@ -34,6 +36,11 @@ public class UserService  implements CommunityConstant {
         return userMapper.selectById(userId);
     }
 
+    /**
+     * 注册业务逻辑
+     * @param user 注册的用户的对象
+     * @return 四种key值，若返回usernameMsg，说明用户名为空或已存在，若返回passwordMsg，说明密码为空，若返回emailMsg，说明邮箱为空或已经被注册了
+     */
     public Map<String,Object> register (User user)
     {
         Map <String,Object> map=new HashMap<>();
@@ -93,6 +100,12 @@ public class UserService  implements CommunityConstant {
         return map;
     }
 
+    /**
+     * 激活账号逻辑
+     * @param userId 用户id
+     * @param code 激活码
+     * @return 三种返回值，若返回ACTIVATION_REPEAT，说明该账户已被激活，若返回ACTIVATION_FAILURE，说明激活码错误或未知情况，若返回ACTIVATION_SUCCESS，说明激活成功
+     */
     //激活账号
     public int activation(int userId,String code)
     {
@@ -115,5 +128,120 @@ public class UserService  implements CommunityConstant {
         return ACTIVATION_FAILURE;
     }
 
+    /**
+     * 登录业务逻辑
+     * @param username 输入的用户名
+     * @param password 输入的密码（明文，需在逻辑中转化为密文)
+     * @param expiredSeconds 登录生效时间
+     * @return 三种key值，若返回usernameMsg,说明账号为空或者不存在或者未激活，若返回passwordMsg,说明密码为空或错误,若返回ticket，说明登陆成功，携带登录信息返回
+     */
+    public Map<String ,Object> login(String username,String password,int expiredSeconds)
+    {
+        Map<String,Object> map=new HashMap<>();
+
+        //空值处理
+        if (StringUtils.isBlank(username))
+        {
+            map.put("usernameMsg","账号不能为空");
+            return map;
+        }
+        if (StringUtils.isBlank(password)) {
+            map.put("passwordMsg", "密码不能为空");
+            return map;
+        }
+        //验证账号
+        User user=userMapper.selectByName(username);
+        if (user==null)
+        {
+            map.put("usernameMsg","该账号不存在");
+            return map;
+        }
+
+        //验证状态
+        if (user.getStatus()==0)
+        {
+            map.put("usernameMsg","该账号未激活");
+            return map;
+        }
+
+        //验证密码
+        password=CommunityUtil.md5(password+user.getSalt());
+        if (!user.getPassword().equals(password))
+        {
+            map.put("passwordMsg","密码错误");
+            return map;
+        }
+        //登陆成功，生成登陆凭证
+        LoginTicket loginTicket=new LoginTicket();
+        loginTicket.setUserId(user.getId());
+        loginTicket.setTicket(CommunityUtil.generateUUID());
+        loginTicket.setStatus(0);
+        loginTicket.setExpired(new Date(System.currentTimeMillis()+expiredSeconds*1000));
+        loginTicketMapper.insertLoginTicket(loginTicket);
+        map.put("ticket",loginTicket.getTicket());
+        return map;
+
+    }
+
+    /**
+     * 登出逻辑
+     * @param ticket 登出的凭证
+     */
+    public void logout(String ticket)
+    {
+        loginTicketMapper.updateStatus(ticket,1);
+    }
+
+    public Map<String,Object> forgetPassword(String email,String newPassword)
+    {
+        Map<String,Object> map=new HashMap<>();
+        if (StringUtils.isBlank(email))
+        {
+            map.put("emailMsg","电子邮箱不能为空");
+            return map;
+        }
+        if (StringUtils.isBlank(newPassword))
+        {
+            map.put("passwordMsg","新密码不能为空");
+            return map;
+        }
+        User user=userMapper.selectByEmail(email);
+        if (user==null || user.getStatus()==0)
+        {
+            map.put("emailMsg","该用户不存在或者未激活");
+            return map;
+        }
+        if (!StringUtils.equals(email,user.getEmail()))
+        {
+            map.put("emailMsg","该邮箱不存在");
+            return map;
+        }
+        if (StringUtils.equals(CommunityUtil.md5(newPassword+user.getSalt()),user.getPassword()))
+        {
+            map.put("passwordMsg","新密码与旧密码一致");
+            return map;
+        }
+        //此处获取7天后的日期，用于更改密码的时效性检查
+        Date now =new Date();
+        SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Calendar c=Calendar.getInstance();
+        c.setTime(now);
+        c.add(Calendar.MINUTE,10);
+        Date notExpiredDay =c.getTime();
+        String Day=sdf.format(notExpiredDay);
+        //开始发送邮件
+        Context context=new Context();
+        context.setVariable("email",email);
+        String url=domain+contextPath+"/confirm/"+user.getId()+'/'+CommunityUtil.md5(newPassword+user.getSalt())+'/'+Day;
+        context.setVariable("url",url);
+        String content=templateEngine.process("/mail/forget",context);
+        mailClient.sendMail(email,"更改密码确认",content);
+        return null;
+    }
+    public void changePassword(int id,String newPassword)
+    {
+        userMapper.updatePassword(id,newPassword);
+        return;
+    }
 
 }

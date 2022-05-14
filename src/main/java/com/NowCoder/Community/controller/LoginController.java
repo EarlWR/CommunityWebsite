@@ -2,6 +2,7 @@ package com.NowCoder.Community.controller;
 
 import ch.qos.logback.core.OutputStreamAppender;
 import com.NowCoder.Community.Service.UserService;
+import com.NowCoder.Community.dao.UserMapper;
 import com.NowCoder.Community.entity.User;
 import com.NowCoder.Community.util.CommunityConstant;
 import com.google.code.kaptcha.Producer;
@@ -28,6 +29,10 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.Map;
 
 @Controller
@@ -39,12 +44,6 @@ public class LoginController implements CommunityConstant {
     private Producer kaptchaProducer;
     @Value("${server.servlet.context-path}")
     private String contextPath;
-    /**
-     * 以下两个方法是向浏览器返回两个html，所以使用get方法。
-     * 当得到html后，注册页面需要获取注册是否成功的信息，登录页面需要获取验证码
-     * 此时浏览器便会向服务器请求注册信息和验证码，所以还需要再写两个post方法
-     * @return
-     */
     @RequestMapping(path = "/register",method = RequestMethod.GET)
     public String getRegisterPage()
     {
@@ -55,9 +54,52 @@ public class LoginController implements CommunityConstant {
     {
         return "/site/login";
     }
-    @RequestMapping(path = "/forgetpassword" ,method = RequestMethod.GET)
-    public String getForgetPassword() {return "/site/forget";}
+    @RequestMapping(path = "/forgetPassword" ,method = RequestMethod.GET)
+    public String getForgetPasswordPage() {return "/site/forget";}
+    @RequestMapping(path = "/forgetPassword",method = RequestMethod.POST)
+    public String forgetPassword (Model model,String email,String newPassword,String code,
+                                  HttpSession session,HttpServletResponse response)
+    {
+        //检查验证码
+        String kaptcha= (String) session.getAttribute("kaptcha");
+        if (StringUtils.isBlank(code) || StringUtils.isBlank(kaptcha) || !kaptcha.equalsIgnoreCase(code))
+        {
+            model.addAttribute("codeMsg","验证码有误");
+            return "/site/forget";
+        }
+        Map<String,Object> map=userService.forgetPassword(email,newPassword);
+        if (map==null || map.isEmpty())
+        {
+            model.addAttribute("msg","我们已经向您的邮箱发送了确认邮件，请确认密码更改");
+            model.addAttribute("target","/index");
+            return "/site/operate-result";
+        }
+        else
+        {
+            model.addAttribute("emailMsg",map.get("emailMsg"));
+            model.addAttribute("passwordMsg",map.get("passwordMsg"));
+            return "/site/forget";
+        }
+    }
+    @RequestMapping(path = "/confirm/{userId}/{newPassword}/{notExpiredDay}",method = RequestMethod.GET)
+    public String confirmChangePassword(Model model, @PathVariable("userId")int userId, @PathVariable("newPassword")String newPassword,
+                                        @PathVariable("notExpiredDay")String Day) throws ParseException {
+        Date now=new Date();
+        SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+        Date notExpiredDay=sdf.parse(Day);
+        int isOutDate=now.compareTo(notExpiredDay);
+        if (isOutDate!=-1)
+        {
+            model.addAttribute("msg","该修改密码请求已过期，请重新请求");
+            model.addAttribute("target","/forgetPassword");
+            return "/site/operate-result";
+        }
+        userService.changePassword(userId,newPassword);
+        model.addAttribute("msg","已确认密码更改，可以使用新密码了");
+        model.addAttribute("target","/index");
+        return "/site/operate-result";
 
+    }
     @RequestMapping(path = "/register",method = RequestMethod.POST)
     public String register (Model model, User user)
     {

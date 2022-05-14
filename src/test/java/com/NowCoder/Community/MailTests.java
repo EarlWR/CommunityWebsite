@@ -10,6 +10,8 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
+import java.util.Calendar;
+import java.util.Date;
 import java.util.Random;
 
 @RunWith(SpringRunner.class)
@@ -22,6 +24,16 @@ public class MailTests {
 
     @Autowired
     private TemplateEngine templateEngine;
+    @Test
+    public void timeTest()
+    {
+        Date now = new Date();
+        Calendar c=Calendar.getInstance();
+        c.setTime(now);
+        c.add(Calendar.DAY_OF_MONTH,1);
+        Date tomorrow=c.getTime();
+        System.out.println(tomorrow);
+    }
 
     @Test
     public void testHtmlMail()
@@ -52,7 +64,7 @@ public class MailTests {
         String str=stringBuffer.toString();
         context.setVariable("code",str);
         String content=templateEngine.process("/mail/forget",context);
-        mailClient.sendMail("2282701633@qq.com","找回密码",content);
+        mailClient.sendMail("541905573@qq.com","找回密码",content);
     }
     @Test
     public void testTextMail()
