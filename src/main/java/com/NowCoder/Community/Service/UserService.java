@@ -85,7 +85,7 @@ public class UserService  implements CommunityConstant {
         //设置为未激活账户（需要邮箱验证激活)
         user.setStatus(0);
         user.setActivationCode(CommunityUtil.generateUUID());
-        user.setHeaderUrl(String.format("http://image.nowcoder.com/head/%dt.png",new Random().nextInt(1000)));
+        user.setHeaderUrl(String.format("http://images.nowcoder.com/head/%dt.png",new Random().nextInt(1000)));
         user.setCreateTime(new Date());
         userMapper.insertUser(user);
 
@@ -176,7 +176,7 @@ public class UserService  implements CommunityConstant {
         loginTicket.setUserId(user.getId());
         loginTicket.setTicket(CommunityUtil.generateUUID());
         loginTicket.setStatus(0);
-        loginTicket.setExpired(new Date(System.currentTimeMillis()+expiredSeconds*1000));
+        loginTicket.setExpired(new Date(System.currentTimeMillis()+expiredSeconds* 1000L));
         loginTicketMapper.insertLoginTicket(loginTicket);
         map.put("ticket",loginTicket.getTicket());
         return map;
@@ -242,6 +242,10 @@ public class UserService  implements CommunityConstant {
     {
         userMapper.updatePassword(id,newPassword);
         return;
+    }
+    public LoginTicket findLoginTicket(String ticket)
+    {
+        return loginTicketMapper.selectByTicket(ticket);
     }
 
 }

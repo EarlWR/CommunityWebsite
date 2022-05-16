@@ -35,6 +35,9 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Map;
 
+/**
+ * @author Earl_WR
+ */
 @Controller
 public class LoginController implements CommunityConstant {
     private static final Logger logger = LoggerFactory.getLogger(LoginController.class);
@@ -83,10 +86,10 @@ public class LoginController implements CommunityConstant {
     }
     @RequestMapping(path = "/confirm/{userId}/{newPassword}/{notExpiredDay}",method = RequestMethod.GET)
     public String confirmChangePassword(Model model, @PathVariable("userId")int userId, @PathVariable("newPassword")String newPassword,
-                                        @PathVariable("notExpiredDay")String Day) throws ParseException {
+                                        @PathVariable("notExpiredDay")String day) throws ParseException {
         Date now=new Date();
         SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
-        Date notExpiredDay=sdf.parse(Day);
+        Date notExpiredDay=sdf.parse(day);
         int isOutDate=now.compareTo(notExpiredDay);
         if (isOutDate!=-1)
         {
@@ -118,7 +121,6 @@ public class LoginController implements CommunityConstant {
             return "/site/register";
         }
     }
-    //http://localhost:8080/community/activation/101/code
     @RequestMapping(path = "/activation/{userId}/{code}",method = RequestMethod.GET)
     public String activation(Model model, @PathVariable("userId") int userId,@PathVariable("code") String code)
     {
