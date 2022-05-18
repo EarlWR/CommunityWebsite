@@ -1,6 +1,7 @@
 package com.NowCoder.Community.config;
 
 import com.NowCoder.Community.controller.interceptor.AlphaInterceptor;
+import com.NowCoder.Community.controller.interceptor.LoginRequiredInterceptor;
 import com.NowCoder.Community.controller.interceptor.LoginTicketInterceptor;
 import com.NowCoder.Community.dao.LoginTicketMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Autowired
     private LoginTicketInterceptor loginTicketInterceptor;
+    @Autowired
+    private LoginRequiredInterceptor loginRequiredInterceptor;
+
     /**
      * 添加一个拦截器
      * @param registry 拦截器注册器
@@ -27,6 +31,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .excludePathPatterns("/**/*.css","/**/*.js","/**/*.png","/**/*.jpg","/**/*.jpeg","/**/*.bmp")
                 .addPathPatterns("/register","/login");
         registry.addInterceptor(loginTicketInterceptor)
+                .excludePathPatterns("/**/*.css","/**/*.js","/**/*.png","/**/*.jpg","/**/*.jpeg","/**/*.bmp");
+        registry.addInterceptor(loginRequiredInterceptor)
                 .excludePathPatterns("/**/*.css","/**/*.js","/**/*.png","/**/*.jpg","/**/*.jpeg","/**/*.bmp");
     }
 }

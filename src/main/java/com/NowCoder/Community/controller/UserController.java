@@ -1,6 +1,7 @@
 package com.NowCoder.Community.controller;
 
 import com.NowCoder.Community.Service.UserService;
+import com.NowCoder.Community.annotation.LoginRequired;
 import com.NowCoder.Community.entity.User;
 import com.NowCoder.Community.util.CommunityUtil;
 import com.NowCoder.Community.util.CookieUtil;
@@ -48,12 +49,23 @@ public class UserController {
      */
     @Autowired
     private HostHolder hostHolder;
-
+    @LoginRequired
     @RequestMapping(path = "/setting", method = RequestMethod.GET)
     public String getSettingPage()
     {
         return "/site/setting";
     }
+
+    /**
+     * 修改密码功能
+     * @param request 用于提取登陆凭证
+     * @param formerPassword 原密码
+     * @param nowPassword 新密码
+     * @param repeatPassword 确认密码
+     * @param model 模板
+     * @return 返回路径，修改失败返回当前页面，成功则退出登录并返回登陆页面
+     */
+    @LoginRequired
     @RequestMapping(path = "/changePassword", method = RequestMethod.POST)
     public String changePassword(HttpServletRequest request, String formerPassword, String nowPassword, String repeatPassword, Model model) {
         //异常判断
@@ -97,6 +109,15 @@ public class UserController {
         userService.logout(loginTicket);
         return "redirect:/login";
     }
+
+
+    /**
+     * 上传头像功能
+     * @param headerImage 头像文件对象
+     * @param model 模板
+     * @return 返回路径，成功返回首页，失败返回当前页
+     */
+    @LoginRequired
     @RequestMapping(path = "/upload",method = RequestMethod.POST)
     public String uploadHeader(MultipartFile headerImage, Model model)
     {
@@ -129,8 +150,13 @@ public class UserController {
         String headerUrl = domain + contextPath + "/user/header/" + fileName;
         userService.updateHeader(user.getId(),headerUrl);
         return "redirect:/index";
-
     }
+
+    /**
+     * 显示头像功能
+     * @param fileName 在upload文件夹中投降的名字
+     * @param response 该方法使用return无法返回，所以使用response来返回图片
+     */
     @RequestMapping(path = "/header/{fileName}",method = RequestMethod.GET)
     public void getHeader(@PathVariable("fileName") String fileName, HttpServletResponse response) {
         //服务器存放路径
