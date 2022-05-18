@@ -238,14 +238,31 @@ public class UserService  implements CommunityConstant {
         mailClient.sendMail(email,"更改密码确认",content);
         return null;
     }
+
+    /**
+     * 修改密码
+     * @param id 用户的id（唯一标识）
+     * @param newPassword 要更新的密码
+     */
     public void changePassword(int id,String newPassword)
     {
         userMapper.updatePassword(id,newPassword);
         return;
     }
+
+    /**
+     * 通过ticket查询登录凭证信息
+     * @param ticket 登录凭证（登录行为的唯一标识)
+     * @return 返回的登录凭证信息
+     */
     public LoginTicket findLoginTicket(String ticket)
     {
         return loginTicketMapper.selectByTicket(ticket);
     }
+
+    public int updateHeader(int id, String headerUrl) {
+        return userMapper.updateHeader(id, headerUrl);
+    }
+
 
 }
